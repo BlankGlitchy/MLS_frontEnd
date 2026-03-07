@@ -13,7 +13,7 @@
    -only the group owner can kick
 - To create dummy users: type test in any textfield while logged in, then a boxe apear. One to set number of users and for naming and one to bulk delete dummy users. 
 
-## Test Accounts
+## Test Accounts (Hardcoded)
 
 - Username: alice, Password: password
 - Username: bob, Password: 123456
@@ -31,7 +31,7 @@
    npm run dev
    ```
 
-3. Open [http://localhost:5173] in your browser.
+3. Open http://localhost:5173 in your browser.
 
 ## Usage
 
@@ -39,4 +39,4 @@
 - Select a chat from the sidebar
 - Type a message and press Enter or click Send (mesages are not saved)
 
-Note: This is a frontend-only app with mock data. Messages are stored in local state and will be lost on refresh.
+Note: This is a frontend-only app with mock data. Messages are stored in local state and will be lost on refresh at the moment.
