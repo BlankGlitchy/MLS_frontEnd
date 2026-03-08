@@ -11,15 +11,16 @@ const defaultUsers = [
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
+//   const [password, setPassword] = useState('')
   const [currentUser, setCurrentUser] = useState('')
   const [error, setError] = useState('')
 
   const handleLogin = (e) => {
     e.preventDefault()
     const users = window.appUsers || defaultUsers
-    const hashedPassword = SHA256(password).toString()
-    const user = users.find(u => u.username === username && u.passwordHash === hashedPassword)
+    // const hashedPassword = SHA256(password).toString()
+    // const user = users.find(u => u.username === username && u.passwordHash === hashedPassword)
+    const user = users.find(u => u.username === username)
     if (user) {
       setCurrentUser(username)
       setIsLoggedIn(true)
@@ -40,12 +41,12 @@ function App() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
-          <input
+          {/* <input
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-          />
+          /> */}
           <button type="submit">Login</button>
           {error && <p className="error">{error}</p>}
         </form>
@@ -84,7 +85,7 @@ function ChatApp({ currentUser }) {
     for (let i = 1; i <= count; i++) {
       newUsers.push({
         username: `${bulkUserPrefix}${i}`,
-        passwordHash: SHA256(`pass${i}`).toString(),
+        // passwordHash: SHA256(`pass${i}`).toString(),
       })
     }
     const updatedUsers = [...users, ...newUsers]
