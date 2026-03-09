@@ -2,32 +2,43 @@ import { useState } from 'react'
 import './App.css'
 import SHA256 from 'crypto-js/sha256'
 
-const defaultUsers = [
-  { username: 'alice', passwordHash: SHA256('password').toString() },
-  { username: 'bob', passwordHash: SHA256('123456').toString() },
-  { username: 'charlie', passwordHash: SHA256('qwerty').toString() },
-]
+const API_URL = 'http://localhost:8000'
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [username, setUsername] = useState('')
-//   const [password, setPassword] = useState('')
+  const [password, setPassword] = useState('')
   const [currentUser, setCurrentUser] = useState('')
   const [error, setError] = useState('')
 
-  const handleLogin = (e) => {
+  const handleLogin = async(e) => {
     e.preventDefault()
-    const users = window.appUsers || defaultUsers
-    // const hashedPassword = SHA256(password).toString()
-    // const user = users.find(u => u.username === username && u.passwordHash === hashedPassword)
-    const user = users.find(u => u.username === username)
-    if (user) {
-      setCurrentUser(username)
-      setIsLoggedIn(true)
-      setError('')
-    } else {
-      setError('Invalid username or password')
+    
+    const credentials = {username: e.target.username.value, password: e.target.password.value}
+    
+    try {
+      constresponse = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(credentials),
+      })
+      const data = await response.json()
+      if (response.ok) {
+        setAuthToken(data.access_token)
+        setCurrentUser(credentials.username)
+        setIsLoggedIn(true)
+        setError('')
+        console.log('Login successful, token received')
+      } else {
+        setError(data.detail || 'Login failed')
+      }
+    } catch (error) {
+      setError('An error occurred during login')
+      console.error('Login error:', error)
     }
+
   }
 
   if (!isLoggedIn) {
@@ -41,12 +52,12 @@ function App() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
-          {/* <input
+          { <input
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-          /> */}
+          /> }
           <button type="submit">Login</button>
           {error && <p className="error">{error}</p>}
         </form>
@@ -54,20 +65,12 @@ function App() {
     )
   }
 
-  return <ChatApp currentUser={currentUser} />
+  return <ChatApp currentUser={credentials.username} />
 }
-
-function ChatApp({ currentUser }) {
-  const [chats, setChats] = useState([
-    { id: 1, type: 'user', name: 'Alice' },
-    { id: 2, type: 'user', name: 'Bob' },
-    { id: 3, type: 'group', name: 'Group1', owner: 'alice', members: ['alice'] },
-    { id: 4, type: 'group', name: 'Group2', owner: 'bob', members: ['bob'] },
-  ])
 
   // filter out chat with oneself
   const filteredChats = chats.filter(
-    c => !(c.type === 'user' && c.name.toLowerCase() === currentUser.toLowerCase())
+    c => !(c.type === 'user' && c.name.toLowerCase() === credentials.username.toLowerCase())
   )
   const [selectedChat, setSelectedChat] = useState(null)
   const [messages, setMessages] = useState({})
@@ -85,7 +88,7 @@ function ChatApp({ currentUser }) {
     for (let i = 1; i <= count; i++) {
       newUsers.push({
         username: `${bulkUserPrefix}${i}`,
-        // passwordHash: SHA256(`pass${i}`).toString(),
+        password: `${bulkUserPrefix}${i}`,
       })
     }
     const updatedUsers = [...users, ...newUsers]
@@ -273,6 +276,6 @@ function ChatApp({ currentUser }) {
       </div>
     </div>
   )
-}
+
 
 export default App
