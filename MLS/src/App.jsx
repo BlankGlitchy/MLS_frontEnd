@@ -11,7 +11,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState('')
   const [error, setError] = useState('')
 
-  const handleLogin = async(e) => {
+  const handleLogin =async (e) => {
     e.preventDefault()
     
     const credentials = {username: e.target.username.value, password: e.target.password.value}
