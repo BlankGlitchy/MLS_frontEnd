@@ -14,7 +14,7 @@ uvicorn delivery_service:app --reload --port 1338 --host 127.0.0.1
 pip install pyhpke
 
 
-dactivate
+activate
 
 from mls_stuff.Enums import CipherSuite
 

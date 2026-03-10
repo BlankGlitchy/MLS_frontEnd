@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import './App.css'
-import SHA256 from 'crypto-js/sha256'
+
 
 const API_URL = 'http://localhost:8000'
 
@@ -17,6 +17,35 @@ function App() {
   const [bulkUserCount, setBulkUserCount] = useState('')
   const [bulkUserPrefix, setBulkUserPrefix] = useState('user')
   const [bulkDeletePrefix, setBulkDeletePrefix] = useState('')
+  const [registerUsername, setRegisterUsername] = useState('')
+  const [registerPassword, setRegisterPassword] = useState('')
+  const [registerError, setRegisterError] = useState('')
+  const [showRegister, setShowRegister] = useState(false)
+
+  const handleRegister = async(e) => {
+    e.preventDefault()
+
+    try {
+      const response = await fetch(`${API_URL}/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({username:registerUsername, password: registerPassword}),
+      })
+      const data = await response.json()
+      if (response.ok) {
+        setShowRegister(false)
+        setError('')
+        console.log('Registration successful')
+      } else {
+        setRegisterError(data.detail || 'Registration failed')
+      }
+    } catch (error) {
+      setRegisterError('An error occurred during registration')
+      console.error('Registration error:', error)
+    }
+  }
 
   const handleLogin = async(e) => {
   e.preventDefault()
@@ -47,6 +76,34 @@ function App() {
 }
 
   if (!isLoggedIn) {
+    if (showRegister) {
+      return (
+        <div className="login">
+          <h2>Register</h2>
+          <form onSubmit={handleRegister}>
+            <input
+              type="text"
+              placeholder="Username"
+              value={registerUsername}
+              onChange={(e) => setRegisterUsername(e.target.value)}
+            />
+            <input
+              type="password"
+              maxLength={12}
+              placeholder="Password"
+              value={registerPassword}
+              onChange={(e) => setRegisterPassword(e.target.value)}
+            />
+            <button type="submit">Register</button>
+            {registerError && <p className="error">{registerError}</p>}
+            <button type="button" onClick={() => setShowRegister(false)}>
+              Back to Login
+            </button>
+          </form>
+        </div>
+      )
+    }
+
     return (
       <div className="login">
         <h2>Login</h2>
@@ -59,12 +116,15 @@ function App() {
           />
           <input
             type="password"
-            placeholder="Password"
+            placeholder=""
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
           <button type="submit">Login</button>
           {error && <p className="error">{error}</p>}
+          <button type="button" onClick={() => setShowRegister(true)}>
+            Register
+          </button>
         </form>
       </div>
     )

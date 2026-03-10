@@ -15,15 +15,25 @@ from typing import Optional, List
 import base64, secrets
 import os
 from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware# loads .env file
 
-load_dotenv()  # loads .env file
 
-
+load_dotenv() 
 app = FastAPI()
+
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+ 
 
-# JWT config 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # React frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+) 
+
+# JWT config
 JWT_SECRET = os.getenv("SECRET_KEY")  # strong secret key from .env
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -86,7 +96,11 @@ async def shutdown():
 
 @app.post("/users")
 async def register_user(user: UserCreate):
-    password_hash = pwd_context.hash(user.password)
+    password_bytes = user.password.encode('utf-8')
+    if len(password_bytes) > 72:
+        raise HTTPException(status_code=400, detail="Password too long; maximum 72 bytes allowed")
+
+    password_hash = pwd_context.hash(password_bytes[:72])
     print(f"Registering user: {user.username}, hashed password: {password_hash}")
     async with db.connection() as conn:
         user_id = await conn.fetchval(
@@ -112,7 +126,11 @@ async def login_user(form_data: OAuth2PasswordRequestForm = Depends()):
             """,
             form_data.username
         )
-        if not row or not pwd_context.verify(form_data.password, row["password_hash"]):
+        password_bytes = form_data.password.encode('utf-8')
+        if len(password_bytes) > 72:
+            raise HTTPException(status_code=400, detail="Password too long; maximum 72 bytes allowed")
+
+        if not row or not pwd_context.verify(password_bytes[:72], row["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid username or password")
 
         token = jwt.encode(
@@ -120,7 +138,6 @@ async def login_user(form_data: OAuth2PasswordRequestForm = Depends()):
             JWT_SECRET,
             algorithm=JWT_ALGORITHM
         )
-
     return {"status": "logged in", "user_id": str(row["user_id"]), "access_token": token, "token_type": "bearer"}
 
 @app.post("/key_packages/mark-used")
