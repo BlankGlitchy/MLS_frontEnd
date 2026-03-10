@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import './App.css'
 
 
@@ -21,6 +21,8 @@ function App() {
   const [registerPassword, setRegisterPassword] = useState('')
   const [registerError, setRegisterError] = useState('')
   const [showRegister, setShowRegister] = useState(false)
+  
+
 
   const handleRegister = async(e) => {
     e.preventDefault()
@@ -50,16 +52,21 @@ function App() {
   const handleLogin = async(e) => {
   e.preventDefault()
   
-  const formData = new FormData()
-  formData.append('username', username)
-  formData.append('password', password)
+  const body = new URLSearchParams()
+  body.append('username', username)
+  body.append('password', password)
   
   try {
     const response = await fetch(`${API_URL}/login`, {
       method: 'POST',
-      body: formData,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
     })
+
     const data = await response.json()
+
     if (response.ok) {
       localStorage.setItem('access_token', data.access_token)
       setCurrentUser(username)
@@ -89,7 +96,6 @@ function App() {
             />
             <input
               type="password"
-              maxLength={12}
               placeholder="Password"
               value={registerPassword}
               onChange={(e) => setRegisterPassword(e.target.value)}
@@ -116,7 +122,7 @@ function App() {
           />
           <input
             type="password"
-            placeholder=""
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
@@ -163,15 +169,15 @@ function App() {
       setSelectedChat(prev => ({ ...prev, members: [...prev.members, usernameToAdd] }))
     }
   }
-
+  
   const kickMember = (usernameToRemove) => {
-    if (selectedChat) {
-      setSelectedChat(prev => ({
-        ...prev,
-        members: prev.members.filter(m => m !== usernameToRemove),
-      }))
+      if (selectedChat) {
+        setSelectedChat(prev => ({
+          ...prev,
+          members: prev.members.filter(m => m !== usernameToRemove),
+        }))
+      }
     }
-  }
 
   const sendMessage = () => {
     if (
@@ -208,6 +214,7 @@ function App() {
           >
             {selectedChat.name}
           </div>
+
         )}
       </div>
       <div className="chat-area">
@@ -230,6 +237,7 @@ function App() {
                 onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
               />
               <button onClick={sendMessage}>Send</button>
+
               {newMessage.toLowerCase().trim() === 'test' && (
                 <div className="bulk-add-container">
                   <div className="bulk-section">
@@ -276,6 +284,5 @@ function App() {
       </div>
     </div>
   )
-}
-
+}  
 export default App

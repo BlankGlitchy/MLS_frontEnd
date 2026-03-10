@@ -105,15 +105,16 @@ def hash_password(password: str) -> str:
     hashed = bcrypt.hashpw(digest, bcrypt.gensalt())
     return hashed.decode("utf-8")
 
-def check_password(password: str, hashed: bytes) -> bool:
+def check_password(password: str, hashed: str) -> bool:
     digest = hashlib.sha256(password.encode("utf-8")).digest()
-    return bcrypt.checkpw(digest, hashed)
+    return bcrypt.checkpw(digest, hashed.encode("utf-8"))
 
 @app.post("/users")
 async def register_user(user: UserCreate):
     print(f"Registering user: {user.password}")
 
     password_hash = hash_password(user.password)
+    
 
     print(f"Registering user: {user.username}, hashed password: {password_hash}")
 
@@ -226,6 +227,7 @@ async def get_user_by_id(
 
 @app.post("/login")
 async def login_user(form_data: OAuth2PasswordRequestForm = Depends()):
+    
     async with db.connection() as conn:
         row = await conn.fetchrow(
             """
@@ -235,19 +237,27 @@ async def login_user(form_data: OAuth2PasswordRequestForm = Depends()):
             """,
             form_data.username
         )
-        password_bytes = form_data.password.encode('utf-8')
-        if len(password_bytes) > 72:
-            raise HTTPException(status_code=400, detail="Password too long; maximum 72 bytes allowed")
 
-        if not row or not pwd_context.verify(password_bytes[:72], row["password_hash"]):
-            raise HTTPException(status_code=401, detail="Invalid username or password")
+        digest = check_password(form_data.password, row["password_hash"]) if row else False
+
+
+        # Pre-hash input password
+    #digest = hashlib.sha256(form_data.password.encode("utf-8")).digest()
+
+        # Verify using bcrypt
+        #if not row or not pwd_context.verify(digest, row["password_hash"]):
+        #    raise HTTPException(status_code=401, detail="Invalid username or password")
 
         token = jwt.encode(
-            {"user_id": str(row["user_id"]), "exp": datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)},
+            {"user_id": str(row["user_id"]), 
+             "exp": datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+             },
             JWT_SECRET,
             algorithm=JWT_ALGORITHM
         )
+
     return {"status": "logged in", "user_id": str(row["user_id"]), "access_token": token, "token_type": "bearer"}
+
 
 @app.post("/key_packages/mark-used")
 async def mark_keypackage_used(request: MarkUsedRequest):
