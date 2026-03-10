@@ -7,10 +7,13 @@ import string
 from typing import Dict, Optional
 import uvicorn
 from datetime import datetime, timedelta
+from fastapi.middleware.cors import CORSMiddleware
+
 #import database_auth as db_auth
 from database_auth import db_auth
 
 app = FastAPI(title="Authentication Service", description="MLS Identity Verification Service")
+
 
 @app.on_event("startup")
 async def startup():
