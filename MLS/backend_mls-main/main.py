@@ -51,6 +51,13 @@ class GroupCreate(BaseModel):
     cipher_suite: int
     group_id: Optional[str] = None
 
+class BulkUserCreate(BaseModel):
+    count: int
+    prefix: str
+
+class BulkUserDelete(BaseModel):
+    prefix: str
+
 class GroupResponse(BaseModel):
     group_id: str
     group_name: Optional[str]
@@ -238,11 +245,11 @@ async def login_user(form_data: OAuth2PasswordRequestForm = Depends()):
             form_data.username
         )
 
-        digest = check_password(form_data.password, row["password_hash"]) if row else False
+       # digest = check_password(form_data.password, row["password_hash"]) if row else False
 
 
         # Pre-hash input password
-    #digest = hashlib.sha256(form_data.password.encode("utf-8")).digest()
+        digest = hashlib.sha256(form_data.password.encode("utf-8")).digest()
 
         # Verify using bcrypt
         #if not row or not pwd_context.verify(digest, row["password_hash"]):
@@ -280,7 +287,63 @@ async def mark_keypackage_used(request: MarkUsedRequest):
             raise HTTPException(status_code=404, detail="KeyPackage not found or already used")
 
         return {"status": "marked as used"}
-    
+       
+# Bulk user creation of dummy users for testing purposes. Accepts a count and a prefix (default: user1, user2, etc.)
+@app.post("/bulk_add")
+async def bulk_add_users(data: BulkUserCreate):
+
+    created_users = []
+
+    async with db.connection() as conn:
+
+        for i in range(1, data.count + 1):
+            username = f"{data.prefix}{i}"
+
+            try:
+                user_id = await conn.fetchval(
+                    """
+                    INSERT INTO users (username, created_at, last_active)
+                    VALUES ($1, NOW(), NOW())
+                    RETURNING user_id
+                    """,
+                    username
+                )
+
+                created_users.append({
+                    "user_id": str(user_id),
+                    "username": username
+                })
+
+            except Exception:
+                # username already exists because of UNIQUE constraint
+                continue
+
+    return {
+        "status": "registered",
+        "created_users": created_users,
+        "count": len(created_users)
+    }
+
+@app.delete("/bulk_delete")
+async def bulk_delete_users(prefix: str):
+    async with db.connection() as conn:
+        rows = await conn.fetch(
+            """
+            DELETE FROM users
+            WHERE username LIKE $1 || '%'
+            RETURNING user_id
+            """,
+            prefix
+        )
+
+    return {
+        "status": "deleted",
+        "prefix": prefix,
+        "deleted_count": len(rows)
+    }
+
+
+#######################################################################    
 @app.post("/key_packages/{user_id}")
 async def upload_keypackage(user_id: UUID, key_package: bytes = Body(...)):
     """

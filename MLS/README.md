@@ -40,3 +40,17 @@
 - Type a message and press Enter or click Send (mesages are not saved)
 
 Note: This is a frontend-only app with mock data. Messages are stored in local state and will be lost on refresh at the moment.
+
+/*<div className="message-input">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Type a message..."
+                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+              />
+              <button onClick={sendMessage}>Send</button>
+
+              {newMessage.toLowerCase().trim() === 'test' && (
+            
+              )}*/

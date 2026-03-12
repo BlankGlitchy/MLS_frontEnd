@@ -16,14 +16,12 @@ function App() {
   const [users, setUsers] = useState([])
   const [bulkUserCount, setBulkUserCount] = useState('')
   const [bulkUserPrefix, setBulkUserPrefix] = useState('user')
-  const [bulkDeletePrefix, setBulkDeletePrefix] = useState('')
   const [registerUsername, setRegisterUsername] = useState('')
   const [registerPassword, setRegisterPassword] = useState('')
   const [registerError, setRegisterError] = useState('')
   const [showRegister, setShowRegister] = useState(false)
   
-
-
+  
   const handleRegister = async(e) => {
     e.preventDefault()
   
@@ -52,17 +50,14 @@ function App() {
   const handleLogin = async(e) => {
   e.preventDefault()
   
-  const body = new URLSearchParams()
+  const body = new FormData()
   body.append('username', username)
   body.append('password', password)
   
   try {
     const response = await fetch(`${API_URL}/login`, {
       method: 'POST',
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: body.toString(),
+      body: body,
     })
 
     const data = await response.json()
@@ -134,67 +129,58 @@ function App() {
         </form>
       </div>
     )
-  }
+  }  
 
-  const bulkAddUsers = () => {
-    const count = parseInt(bulkUserCount) || 0
-    if (count <= 0) return
-    
-    const newUsers = []
-    for (let i = 1; i <= count; i++) {
-      newUsers.push({
-        username: `${bulkUserPrefix}${i}`,
-        password: `${bulkUserPrefix}${i}`,
+  const bulkAddUsers = async () => {
+    const count = parseInt(bulkUserCount)
+    try {
+      const res = await fetch(`${API_URL}/bulk_add`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          count: count,
+          prefix: bulkUserPrefix
+        })
       })
-    }
-    const updatedUsers = [...users, ...newUsers]
-    setUsers(updatedUsers)
-    setNewMessage('')
-    setBulkUserCount('')
-    setBulkUserPrefix('user')
-  }
-  
-  const bulkDeleteUsers = () => {
-    if (!bulkDeletePrefix.trim()) return
-    
-    const updatedUsers = users.filter(
-      u => !u.username.includes(bulkDeletePrefix.toLowerCase())
-    )
-    setUsers(updatedUsers)
-    setBulkDeletePrefix('')
-  }
-  
-  const addMember = (usernameToAdd) => {
-    if (users.find(u => u.username === usernameToAdd) && selectedChat && !selectedChat.members.includes(usernameToAdd)) {
-      setSelectedChat(prev => ({ ...prev, members: [...prev.members, usernameToAdd] }))
-    }
-  }
-  
-  const kickMember = (usernameToRemove) => {
-      if (selectedChat) {
-        setSelectedChat(prev => ({
-          ...prev,
-          members: prev.members.filter(m => m !== usernameToRemove),
-        }))
+
+      const data = await res.json()
+
+      if (res.ok) {
+        console.log("Bulk add successful:", data)
       }
-    }
 
-  const sendMessage = () => {
-    if (
-      newMessage.trim() &&
-      selectedChat &&
-      !(selectedChat.type === 'user' && selectedChat.name.toLowerCase() === currentUser.toLowerCase())
-    ) {
-      const chatId = selectedChat.id
-      const msg = { text: newMessage, sender: currentUser, timestamp: new Date() }
-      setMessages(prev => ({
-        ...prev,
-        [chatId]: [...(prev[chatId] || []), msg]
-      }))
-      setNewMessage('')
+      setBulkUserCount('')
+      setBulkUserPrefix('user')
+
+    } catch (err) {
+      console.error("Bulk add failed:", err)
     }
   }
 
+  const bulkDeleteUsers = async () => {
+  try {
+    const res = await fetch(`${API_URL}/bulk_delete?prefix=${bulkUserPrefix}`, {
+      method: "DELETE"
+    })
+
+    const data = await res.json()
+
+    if (res.ok) {
+      console.log("Bulk delete successful:", data)
+
+      setUsers(users.filter(u => !u.username.startsWith(bulkDeletePrefix)))
+
+      setBulkUserPrefix('user')
+    }
+
+  } catch (err) {
+    console.error("Bulk delete failed:", err)
+  }
+}
+
+  /* Main chat app UI */
   return (
     <div className="chat-app">
       <div className="sidebar">
@@ -207,16 +193,49 @@ function App() {
           Log Out
         </button>
         <h3>Chats</h3>
+        <h3>Users</h3>
+{users.map((u) => (
+  <div
+    key={u.username}
+    className="chat-item"
+    onClick={() =>
+      setSelectedChat({
+        id: u.username,
+        name: u.username,
+        members: [currentUser, u.username],
+      })
+    }
+  >
+    {u.username}
+  </div>
+))}
+{/* Show selected chat at top of sidebar */}
         {selectedChat && (
-          <div
-            className="chat-item active"
-            onClick={() => setSelectedChat(selectedChat)}
-          >
+          <div className="chat-item active">
             {selectedChat.name}
           </div>
-
         )}
+        {/* Bulk user management section */}
+        <div className="bulk-user-management">
+        <h3>Bulk User Creation</h3>
+        <input
+          type="number"
+          placeholder="Number of users"
+          value={bulkUserCount}
+          onChange={(e) => setBulkUserCount(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Username prefix"
+          value={bulkUserPrefix}
+          onChange={(e) => setBulkUserPrefix(e.target.value)}
+        />
+        <button onClick={bulkAddUsers}>Create Users</button>
+        <button onClick={bulkDeleteUsers}>Delete Users</button>
       </div>
+      </div>
+
+{/* Chat area */}
       <div className="chat-area">
         {selectedChat ? (
           <>
@@ -227,55 +246,6 @@ function App() {
                   <strong>{msg.sender}:</strong> {msg.text}
                 </div>
               ))}
-            </div>
-            <div className="message-input">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type a message..."
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-              />
-              <button onClick={sendMessage}>Send</button>
-
-              {newMessage.toLowerCase().trim() === 'test' && (
-                <div className="bulk-add-container">
-                  <div className="bulk-section">
-                    <h5>Create Users</h5>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="Number of users"
-                      value={bulkUserCount}
-                      onChange={(e) => setBulkUserCount(e.target.value)}
-                      className="bulk-input"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Username prefix (e.g. 'user')"
-                      value={bulkUserPrefix}
-                      onChange={(e) => setBulkUserPrefix(e.target.value)}
-                      className="bulk-input"
-                    />
-                    <button className="bulk-add-btn" onClick={bulkAddUsers}>
-                      Create Users
-                    </button>
-                  </div>
-                  <div className="bulk-section">
-                    <h5>Delete Users</h5>
-                    <input
-                      type="text"
-                      placeholder="Username/prefix to delete"
-                      value={bulkDeletePrefix}
-                      onChange={(e) => setBulkDeletePrefix(e.target.value)}
-                      className="bulk-input"
-                    />
-                    <button className="bulk-delete-btn" onClick={bulkDeleteUsers}>
-                      Delete Users
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           </>
         ) : (
