@@ -323,7 +323,7 @@ async def bulk_add_users(data: BulkUserCreate):
         "created_users": created_users,
         "count": len(created_users)
     }
-
+# Delete users in bulk by prefix 
 @app.delete("/bulk_delete")
 async def bulk_delete_users(prefix: str):
     async with db.connection() as conn:
